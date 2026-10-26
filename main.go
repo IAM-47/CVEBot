@@ -50,17 +50,16 @@ type SendMessageResponse struct {
 }
 
 var token = os.Getenv("TELEGRAM_TOKEN")
-var baseUrl string = "https://api.telegram.org/bot" + token + "/getUpdates"
-var sendUrl string = "https://api.telegram.org/bot" + token + "/sendMessage"
+var baseURL string = "https://api.telegram.org/bot" + token + "/getUpdates"
+var sendURL string = "https://api.telegram.org/bot" + token + "/sendMessage"
 
 func main() {
 	if token == "" {
 		log.Fatal("TELEGRAM_TOKEN environment variable not set")
 	}
-	text := "привет, это CVE-бот"
 	var offset int64 = 0
 	for {
-		res, err := getUpdates(baseUrl, offset)
+		res, err := getUpdates(baseURL, offset)
 		if err != nil {
 			log.Printf("cant get updates: %v", err)
 			time.Sleep(1 * time.Second)
@@ -70,15 +69,18 @@ func main() {
 			fmt.Printf("Update ID: %d\n", res[i].ID)
 			if res[i].Msg != nil {
 				fmt.Printf("Text: %s\nChatID: %d\n", res[i].Msg.Text, res[i].Msg.Chat.ID)
-				if err := sendMessage(sendUrl, res[i].Msg.Chat.ID, text); err != nil {
-					log.Printf("send message: %v", err)
+				answer := handleText(res[i].Msg.Text)
+				if answer != "" {
+					if err := sendMessage(sendURL, res[i].Msg.Chat.ID, answer); err != nil {
+						log.Printf("send message: %v", err)
+					}
 				}
 			}
-			if len(res) > 0 {
-				offset = res[len(res)-1].ID + 1
-			}
-		}
 
+		}
+		if len(res) > 0 {
+			offset = res[len(res)-1].ID + 1
+		}
 	}
 
 }
@@ -127,4 +129,31 @@ func sendMessage(u string, chatID int64, msg string) error {
 		return fmt.Errorf("status isn't OK, error_code: %d, description: %s", res.ErrCode, res.Description)
 	}
 	return nil
+}
+
+func handleText(text string) string {
+	words := strings.Fields(text)
+	switch {
+	//
+	case len(words) == 0:
+		return ""
+	//
+	case len(words) == 1 && words[0] == "/start":
+		return "Hey! just send me command like \"/cve <any tech> [version]\""
+	//
+	case strings.HasPrefix(words[0], "/") && words[0] != "/cve":
+		return "Unknown command"
+	//
+	case words[0] == "/cve" && len(words) == 3:
+		return fmt.Sprintf("Trying to find cve for %s %s", words[1], words[2])
+	//
+	case len(words) > 3 && words[0] == "/cve" || (len(words) == 1 && words[0] == "/cve"):
+		return "Please send me command like \"/cve <any tech> [version]\""
+	//
+	case words[0] == "/cve" && len(words) == 2:
+		return fmt.Sprintf("Trying to find cve for %s any version", words[1])
+	//
+	default:
+		return text
+	}
 }
