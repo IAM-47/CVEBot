@@ -1,0 +1,130 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type Update struct {
+	ID  int64    `json:"update_id"`
+	Msg *Message `json:"message"`
+}
+type Message struct {
+	ID   int64  `json:"message_id"`
+	From From   `json:"from"`
+	Chat Chat   `json:"chat"`
+	Date int64  `json:"date"`
+	Text string `json:"text"`
+}
+type From struct {
+	ID        int64  `json:"id"`
+	IsBot     bool   `json:"is_bot"`
+	FirstName string `json:"first_name"`
+	UserName  string `json:"username"`
+	LangCode  string `json:"language_code"`
+}
+type Chat struct {
+	ID        int64  `json:"id"`
+	FirstName string `json:"first_name"`
+	UserName  string `json:"username"`
+	Type      string `json:"type"`
+}
+type UpdatesResponse struct {
+	Ok          bool     `json:"ok"`
+	Result      []Update `json:"result"`
+	ErrCode     int      `json:"error_code"`
+	Description string   `json:"description"`
+}
+type SendMessageResponse struct {
+	Ok          bool   `json:"ok"`
+	ErrCode     int    `json:"error_code"`
+	Description string `json:"description"`
+}
+
+var token = os.Getenv("TELEGRAM_TOKEN")
+var baseUrl string = "https://api.telegram.org/bot" + token + "/getUpdates"
+var sendUrl string = "https://api.telegram.org/bot" + token + "/sendMessage"
+
+func main() {
+	if token == "" {
+		log.Fatal("TELEGRAM_TOKEN environment variable not set")
+	}
+	text := "привет, это CVE-бот"
+	var offset int64 = 0
+	for {
+		res, err := getUpdates(baseUrl, offset)
+		if err != nil {
+			log.Printf("cant get updates: %v", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		for i := range res {
+			fmt.Printf("Update ID: %d\n", res[i].ID)
+			if res[i].Msg != nil {
+				fmt.Printf("Text: %s\nChatID: %d\n", res[i].Msg.Text, res[i].Msg.Chat.ID)
+				if err := sendMessage(sendUrl, res[i].Msg.Chat.ID, text); err != nil {
+					log.Printf("send message: %v", err)
+				}
+			}
+			if len(res) > 0 {
+				offset = res[len(res)-1].ID + 1
+			}
+		}
+
+	}
+
+}
+
+func getUpdates(uRl string, offset int64) ([]Update, error) {
+	q := url.Values{}
+	q.Add("offset", strconv.FormatInt(offset, 10))
+	q.Add("timeout", "30")
+
+	resp, err := http.Get(uRl + "?" + q.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("cant do request: %w", err)
+	}
+	defer resp.Body.Close()
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("cant read: %w", err)
+	}
+	var res UpdatesResponse
+	if err := json.Unmarshal(respBytes, &res); err != nil {
+		return nil, fmt.Errorf("cant unmarshal: %w", err)
+	}
+	if !res.Ok {
+		return nil, fmt.Errorf("status isn't OK, error_code: %d, description: %s", res.ErrCode, res.Description)
+	}
+	return res.Result, nil
+}
+func sendMessage(u string, chatID int64, msg string) error {
+	q := url.Values{}
+	q.Add("chat_id", strconv.FormatInt(chatID, 10))
+	q.Add("text", msg)
+	sendResponse, err := http.Post(u, "application/x-www-form-urlencoded", strings.NewReader(q.Encode()))
+	if err != nil {
+		return fmt.Errorf("cant do request: %w", err)
+	}
+	defer sendResponse.Body.Close()
+	msgByte, err := io.ReadAll(sendResponse.Body)
+	if err != nil {
+		return fmt.Errorf("cant read: %w", err)
+	}
+	var res SendMessageResponse
+	if err := json.Unmarshal(msgByte, &res); err != nil {
+		return fmt.Errorf("cant unmarshal: %w", err)
+	}
+	if !res.Ok {
+		return fmt.Errorf("status isn't OK, error_code: %d, description: %s", res.ErrCode, res.Description)
+	}
+	return nil
+}
