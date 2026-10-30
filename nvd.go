@@ -86,37 +86,34 @@ func NVDData(keyword string) (*NVDResponse, error) {
 	}
 	return data, nil
 }
-func (c CVE) BestScore() (score float64, version string, type1 string, flag bool, err error) {
-	suf, err := c.BestVersion()
-	if err != nil {
-		return score, "", "", false, fmt.Errorf("failed to determine NVD version: %w", err)
-	}
-	version = "cvssMetricV" + suf
+func (c CVE) BestScore() (score float64, version string, type1 string, flag bool) {
+	version = c.BestVersion()
+	key := "cvssMetricV" + version
 	score = -1.0
-	for j := range c.Metrics[version] {
-		if c.Metrics[version][j].CData.BaseScore == nil {
+	for j := range c.Metrics[key] {
+		if c.Metrics[key][j].CData.BaseScore == nil {
 			continue
 		}
-		if c.Metrics[version][j].Type == "Primary" {
-			score, type1, flag, err = *c.Metrics[version][j].CData.BaseScore, c.Metrics[version][j].Type, true, nil
+		if c.Metrics[key][j].Type == "Primary" {
+			score, type1, flag = *c.Metrics[key][j].CData.BaseScore, c.Metrics[key][j].Type, true
 			break
 		}
-		if *c.Metrics[version][j].CData.BaseScore > score {
-			score, type1, flag, err = *c.Metrics[version][j].CData.BaseScore, c.Metrics[version][j].Type, true, nil
+		if *c.Metrics[key][j].CData.BaseScore > score {
+			score, type1, flag = *c.Metrics[key][j].CData.BaseScore, c.Metrics[key][j].Type, true
 		}
 	}
-	if flag == false {
+	if !flag {
 		score = 0.0
 	}
-	return score, suf, type1, flag, nil
+	return score, version, type1, flag
 }
-func (c CVE) BestVersion() (string, error) {
+func (c CVE) BestVersion() string {
 	mx := 0
 	for i := range c.Metrics {
 		if suf, ok := strings.CutPrefix(i, "cvssMetricV"); ok {
 			ver, err := strconv.Atoi(suf)
 			if err != nil {
-				return "", fmt.Errorf("failed to parse cvss metric version: %w", err)
+				continue
 			}
 			for j := range c.Metrics[i] {
 				if c.Metrics[i][j].CData.BaseScore == nil {
@@ -131,8 +128,8 @@ func (c CVE) BestVersion() (string, error) {
 		}
 	}
 	if mx == 0 {
-		return "", fmt.Errorf("cant find NVD metric version")
+		return ""
 	}
 	res := strconv.Itoa(mx)
-	return res, nil
+	return res
 }

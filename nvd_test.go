@@ -138,7 +138,7 @@ func TestCVE_BestScore(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			score, version, type1, flag, _ := tc.cve.BestScore()
+			score, version, type1, flag := tc.cve.BestScore()
 			if score != tc.wantScore {
 				t.Errorf("got %f, want %f", score, tc.wantScore)
 			}
