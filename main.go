@@ -50,8 +50,9 @@ type SendMessageResponse struct {
 }
 
 var token = os.Getenv("TELEGRAM_TOKEN")
-var baseURL string = "https://api.telegram.org/bot" + token + "/getUpdates"
-var sendURL string = "https://api.telegram.org/bot" + token + "/sendMessage"
+var baseURL = "https://api.telegram.org/bot" + token + "/getUpdates"
+var sendURL = "https://api.telegram.org/bot" + token + "/sendMessage"
+var client = http.Client{Timeout: time.Second * 10}
 
 func main() {
 	if token == "" {
