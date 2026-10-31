@@ -58,6 +58,7 @@ func (c CVE) EngDescription() (string, bool) {
 func NVDData(keyword string) (*NVDResponse, error) {
 	q := url.Values{}
 	q.Set("keywordSearch", keyword)
+	q.Set("keywordExactMatch", "")
 	q.Set("resultsPerPage", "5")
 	req, err := http.NewRequest(
 		"GET",
