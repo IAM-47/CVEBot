@@ -66,20 +66,23 @@ func main() {
 			fmt.Printf("Update ID: %d\n", res[i].ID)
 			if res[i].Msg != nil {
 				fmt.Printf("Text: %s\nChatID: %d\n", res[i].Msg.Text, res[i].Msg.Chat.ID)
-				message, result, err := handleUpdate(res[i].Msg.Text)
-				if err != nil {
-					log.Printf("cant handle update: %v", err)
-				}
+				message, req, flag := handleText(res[i].Msg.Text)
 				if err := sendMessage(sendURL, res[i].Msg.Chat.ID, message); err != nil {
 					log.Printf("send message: %v", err)
 				}
-				if result != "" {
-					if err := sendMessage(sendURL, res[i].Msg.Chat.ID, result); err != nil {
+				if !flag {
+					continue
+				}
+				msg, err := handleReq(req)
+				if err != nil {
+					log.Printf("cant handleReq: %v", err)
+				}
+				if msg != "" {
+					if err := sendMessage(sendURL, res[i].Msg.Chat.ID, msg); err != nil {
 						log.Printf("send message: %v", err)
 					}
 				}
 			}
-
 		}
 		if len(res) > 0 {
 			offset = res[len(res)-1].ID + 1

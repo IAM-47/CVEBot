@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,11 +16,15 @@ func getUpdates(uRl string, offset int64) ([]Update, error) {
 	q.Add("offset", strconv.FormatInt(offset, 10))
 	q.Add("timeout", "30")
 
+	var urlErr *url.Error
 	resp, err := http.Get(uRl + "?" + q.Encode())
 	if err != nil {
+		if errors.As(err, &urlErr) {
+			return nil, fmt.Errorf("cant do request: %s %w", urlErr.Op, urlErr.Err)
+		}
 		return nil, fmt.Errorf("cant do request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("cant read: %w", err)
@@ -38,10 +43,14 @@ func sendMessage(u string, chatID int64, msg string) error {
 	q.Add("chat_id", strconv.FormatInt(chatID, 10))
 	q.Add("text", msg)
 	sendResponse, err := http.Post(u, "application/x-www-form-urlencoded", strings.NewReader(q.Encode()))
+	var urlErr *url.Error
 	if err != nil {
+		if errors.As(err, &urlErr) {
+			return fmt.Errorf("cant do request: %s %w", urlErr.Op, urlErr.Err)
+		}
 		return fmt.Errorf("cant do request: %w", err)
 	}
-	defer sendResponse.Body.Close()
+	defer func() { _ = sendResponse.Body.Close }()
 	msgByte, err := io.ReadAll(sendResponse.Body)
 	if err != nil {
 		return fmt.Errorf("cant read: %w", err)
@@ -63,6 +72,9 @@ func handleText(text string) (msg string, req string, flag bool) {
 	case len(words) == 0:
 		return HintMessage, "", false
 	//
+	case len(words) == 2 && len([]rune(words[1])) < 2 && words[0] == "/cve":
+		return TooShortQuery, "", false
+	//
 	case words[0] == "/start":
 		return "Hey! " + HintMessage, "", false
 	//
@@ -74,29 +86,24 @@ func handleText(text string) (msg string, req string, flag bool) {
 	//
 	case len(words) == 1 && words[0] == "/cve":
 		return HintMessage, "", false
+	//
 	default:
 		return HintMessage, "", false
 	}
 }
-func handleUpdate(message string) (msg string, text string, err error) {
-	msg, req, flag := handleText(message)
+func handleReq(req string) (msg string, err error) {
 	vulns := make([]string, 0, 5)
-	if !flag {
-		return msg, "", nil
-	}
-	if len([]rune(req)) < 2 {
-		return TooShortQuery, "", nil
-	}
 	resp, err := NVDData(req)
 	if err != nil {
-		return BedNetworkMessage, "", fmt.Errorf("cant do request: %w", err)
+		return BedNetworkMessage, fmt.Errorf("cant do request: %w", err)
 	}
-	if resp.TotalResults == 0 {
-		return EmptyRespMessage, "", nil
+	if len(resp.Vulnerabilities) == 0 {
+		return EmptyRespMessage, nil
 	}
 	for i := range resp.Vulnerabilities {
 		vulns = append(vulns, formatCVE(resp.Vulnerabilities[i].Cve))
-		text = strings.Join(vulns, "\n\n")
+
 	}
-	return msg, text, nil
+	msg = strings.Join(vulns, "\n\n")
+	return msg, nil
 }
