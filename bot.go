@@ -50,7 +50,7 @@ func sendMessage(u string, chatID int64, msg string) error {
 		}
 		return fmt.Errorf("cant do request: %w", err)
 	}
-	defer func() { _ = sendResponse.Body.Close }()
+	defer func() { _ = sendResponse.Body.Close() }()
 	msgByte, err := io.ReadAll(sendResponse.Body)
 	if err != nil {
 		return fmt.Errorf("cant read: %w", err)
