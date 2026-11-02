@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,12 +15,9 @@ func getUpdates(uRl string, offset int64) ([]Update, error) {
 	q.Add("offset", strconv.FormatInt(offset, 10))
 	q.Add("timeout", "30")
 
-	var urlErr *url.Error
 	resp, err := http.Get(uRl + "?" + q.Encode())
 	if err != nil {
-		if errors.As(err, &urlErr) {
-			return nil, fmt.Errorf("cant do request: %s %w", urlErr.Op, urlErr.Err)
-		}
+		err = cleanURL(err)
 		return nil, fmt.Errorf("cant do request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -43,11 +39,8 @@ func sendMessage(u string, chatID int64, msg string) error {
 	q.Add("chat_id", strconv.FormatInt(chatID, 10))
 	q.Add("text", msg)
 	sendResponse, err := http.Post(u, "application/x-www-form-urlencoded", strings.NewReader(q.Encode()))
-	var urlErr *url.Error
 	if err != nil {
-		if errors.As(err, &urlErr) {
-			return fmt.Errorf("cant do request: %s %w", urlErr.Op, urlErr.Err)
-		}
+		err = cleanURL(err)
 		return fmt.Errorf("cant do request: %w", err)
 	}
 	defer func() { _ = sendResponse.Body.Close() }()
