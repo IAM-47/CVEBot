@@ -154,3 +154,128 @@ func TestCVE_BestScore(t *testing.T) {
 		})
 	}
 }
+func TestBuildCPE(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		// General
+		{
+			name:     "nginx 1.18",
+			input:    "nginx 1.18",
+			expected: "cpe:2.3:a:*:nginx:1.18",
+		},
+		{
+			name:     "Caps",
+			input:    "NGINX 1.18",
+			expected: "cpe:2.3:a:*:nginx:1.18",
+		},
+		{
+			name:     "extra spaces",
+			input:    "  nginx             1.18      ",
+			expected: "cpe:2.3:a:*:nginx:1.18",
+		},
+		{
+			name:     "without version",
+			input:    "nginx",
+			expected: "cpe:2.3:a:*:nginx",
+		},
+		{
+			name:     "double word query",
+			input:    "internet explorer",
+			expected: "cpe:2.3:a:*:internet_explorer",
+		},
+		{
+			name:     "double word query + version",
+			input:    "internet explorer 11",
+			expected: "cpe:2.3:a:*:internet_explorer:11",
+		},
+		// Synonyms
+		{
+			name:     "apache 2.4.49",
+			input:    "apache 2.4.49",
+			expected: "cpe:2.3:a:*:http_server:2.4.49",
+		},
+		{
+			name:     "apache http server 2.4.49",
+			input:    "apache http server 2.4.49",
+			expected: "cpe:2.3:a:*:http_server:2.4.49",
+		},
+		{
+			name:     "httpd 2.4.49",
+			input:    "httpd 2.4.49",
+			expected: "cpe:2.3:a:*:http_server:2.4.49",
+		},
+		{
+			name:     "postgres 14.2",
+			input:    "postgres 14.2",
+			expected: "cpe:2.3:a:*:postgresql:14.2",
+		},
+		{
+			name:     "mongo 5.0",
+			input:    "mongo 5.0",
+			expected: "cpe:2.3:a:*:mongodb:5.0",
+		},
+		{
+			name:     "nodejs 18.0.0",
+			input:    "nodejs 18.0.0",
+			expected: "cpe:2.3:a:*:node.js:18.0.0",
+		},
+		{
+			name:     "golang 1.20",
+			input:    "golang 1.20",
+			expected: "cpe:2.3:a:*:go:1.20",
+		},
+		{
+			name:     "spring 5.3.0",
+			input:    "spring 5.3.0",
+			expected: "cpe:2.3:a:*:spring_framework:5.3.0",
+		},
+		{
+			name:     "k8s 1.27",
+			input:    "k8s 1.27",
+			expected: "cpe:2.3:a:*:kubernetes:1.27",
+		},
+		// Substring protection
+		{
+			name:     "mongodb 1.27",
+			input:    "mongodb 1.27",
+			expected: "cpe:2.3:a:*:mongodb:1.27",
+		},
+		{
+			name:     "myapache 2.4",
+			input:    "myapache 2.4",
+			expected: "cpe:2.3:a:*:myapache:2.4",
+		},
+		// Edge cases
+		{
+			name:     "7zip",
+			input:    "7zip",
+			expected: "cpe:2.3:a:*:7zip",
+		},
+		{
+			name:     "1.24.0",
+			input:    "1.24.0",
+			expected: "cpe:2.3:a:*:1.24.0",
+		},
+		{
+			name:     "empty",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "only spaces",
+			input:    "       ",
+			expected: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := buildCPE(test.input)
+			if got != test.expected {
+				t.Errorf("got %q, want %q", got, test.expected)
+			}
+		})
+	}
+}

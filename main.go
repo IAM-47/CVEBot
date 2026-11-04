@@ -47,7 +47,8 @@ type SendMessageResponse struct {
 var token = os.Getenv("TELEGRAM_TOKEN")
 var baseURL = "https://api.telegram.org/bot" + token + "/getUpdates"
 var sendURL = "https://api.telegram.org/bot" + token + "/sendMessage"
-var client = http.Client{Timeout: time.Second * 10}
+var apiclient = http.Client{Timeout: time.Second * 10}
+var pollClient = http.Client{Timeout: time.Second * 45}
 var offset int64 = 0
 
 func main() {

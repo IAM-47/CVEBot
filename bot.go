@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -15,7 +14,7 @@ func getUpdates(uRl string, offset int64) ([]Update, error) {
 	q.Add("offset", strconv.FormatInt(offset, 10))
 	q.Add("timeout", "30")
 
-	resp, err := http.Get(uRl + "?" + q.Encode())
+	resp, err := pollClient.Get(uRl + "?" + q.Encode())
 	if err != nil {
 		err = cleanURL(err)
 		return nil, fmt.Errorf("cant do request: %w", err)
@@ -38,7 +37,7 @@ func sendMessage(u string, chatID int64, msg string) error {
 	q := url.Values{}
 	q.Add("chat_id", strconv.FormatInt(chatID, 10))
 	q.Add("text", msg)
-	sendResponse, err := http.Post(u, "application/x-www-form-urlencoded", strings.NewReader(q.Encode()))
+	sendResponse, err := apiclient.Post(u, "application/x-www-form-urlencoded", strings.NewReader(q.Encode()))
 	if err != nil {
 		err = cleanURL(err)
 		return fmt.Errorf("cant do request: %w", err)

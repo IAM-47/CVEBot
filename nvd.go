@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type NVDResponse struct {
@@ -69,11 +70,11 @@ func NVDData(keyword string) (*NVDResponse, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.URL.RawQuery = q.Encode()
-	resp, err := client.Do(req)
+	resp, err := apiclient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("NVD API returned status code %d", resp.StatusCode)
 	}
@@ -133,4 +134,37 @@ func (c CVE) BestVersion() string {
 	}
 	res := strconv.Itoa(mx)
 	return res
+}
+func buildCPE(query string) string {
+	synonyms := map[string]string{
+		"apache":             "http_server",
+		"apache http server": "http_server",
+		"httpd":              "http_server",
+		"postgres":           "postgresql",
+		"mongo":              "mongodb",
+		"nodejs":             "node.js",
+		"golang":             "go",
+		"spring":             "spring_framework",
+		"k8s":                "kubernetes",
+	}
+
+	query = strings.ToLower(query)
+	words := strings.Fields(query)
+	if len(words) == 0 {
+		return ""
+	}
+	lastWord := words[len(words)-1]
+	runes := []rune(lastWord)
+	if unicode.IsDigit(runes[0]) && len(words) > 1 {
+		param := strings.Join(words[:len(words)-1], "_")
+		if v, ok := synonyms[strings.Join(words[:len(words)-1], " ")]; ok {
+			param = v
+		}
+		return fmt.Sprintf("cpe:2.3:a:*:%s:%s", param, lastWord)
+	}
+	param := strings.Join(words, "_")
+	if v, ok := synonyms[strings.Join(words, " ")]; ok {
+		param = v
+	}
+	return fmt.Sprintf("cpe:2.3:a:*:%s", param)
 }
