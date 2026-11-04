@@ -57,9 +57,9 @@ func (c CVE) EngDescription() (string, bool) {
 	return desc, fl
 }
 func NVDData(keyword string) (*NVDResponse, error) {
+	cpe := buildCPE(keyword)
 	q := url.Values{}
-	q.Set("keywordSearch", keyword)
-	q.Set("keywordExactMatch", "")
+	q.Set("VirtualMatchString", cpe)
 	q.Set("resultsPerPage", "5")
 	req, err := http.NewRequest(
 		"GET",
@@ -135,6 +135,8 @@ func (c CVE) BestVersion() string {
 	res := strconv.Itoa(mx)
 	return res
 }
+
+// Not empty query is guaranteed by handleText
 func buildCPE(query string) string {
 	synonyms := map[string]string{
 		"apache":             "http_server",
