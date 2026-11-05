@@ -1,11 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Update struct {
@@ -44,18 +47,21 @@ type SendMessageResponse struct {
 	Description string `json:"description"`
 }
 
-var token = os.Getenv("TELEGRAM_TOKEN")
-var baseURL = "https://api.telegram.org/bot" + token + "/getUpdates"
-var sendURL = "https://api.telegram.org/bot" + token + "/sendMessage"
 var apiclient = http.Client{Timeout: time.Second * 10}
 var pollClient = http.Client{Timeout: time.Second * 45}
-var offset int64 = 0
 
 func main() {
-	if token == "" {
-		log.Fatal("TELEGRAM_TOKEN environment variable not set")
+	err := godotenv.Load(".env")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Fatal(err)
 	}
-
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var baseURL = "https://api.telegram.org/bot" + cfg.TelegramToken + "/getUpdates"
+	var sendURL = "https://api.telegram.org/bot" + cfg.TelegramToken + "/sendMessage"
+	var offset int64 = 0
 	for {
 		res, err := getUpdates(baseURL, offset)
 		if err != nil {
@@ -74,7 +80,7 @@ func main() {
 				if !flag {
 					continue
 				}
-				msg, err := handleReq(req)
+				msg, err := handleReq(req, cfg.NVDAPIKey)
 				if err != nil {
 					log.Printf("cant handleReq: %v", err)
 				}

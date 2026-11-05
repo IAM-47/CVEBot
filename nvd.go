@@ -56,8 +56,7 @@ func (c CVE) EngDescription() (string, bool) {
 	}
 	return desc, fl
 }
-func NVDData(keyword string) (*NVDResponse, error) {
-	cpe := buildCPE(keyword)
+func newNVDRequest(cpe, apiKey string) (*http.Request, error) {
 	q := url.Values{}
 	q.Set("VirtualMatchString", cpe)
 	q.Set("resultsPerPage", "5")
@@ -70,6 +69,14 @@ func NVDData(keyword string) (*NVDResponse, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.URL.RawQuery = q.Encode()
+	if apiKey != "" {
+		req.Header.Set("apiKey", apiKey)
+	}
+	return req, nil
+}
+func NVDData(keyword, apiKey string) (*NVDResponse, error) {
+	cpe := buildCPE(keyword)
+	req, err := newNVDRequest(cpe, apiKey)
 	resp, err := apiclient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)

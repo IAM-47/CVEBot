@@ -279,3 +279,48 @@ func TestBuildCPE(t *testing.T) {
 		})
 	}
 }
+func TestNewNVDRequest(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputCPE    string
+		inputAPIKey string
+		wantCPE     string
+		wantHeader  bool
+		wantAPIKey  string
+	}{
+		{
+			name:        "Key here",
+			inputCPE:    "cpe:2.3:a:*:http_server:2.4.49",
+			inputAPIKey: "132456",
+			wantCPE:     "cpe:2.3:a:*:http_server:2.4.49",
+			wantHeader:  true,
+			wantAPIKey:  "132456",
+		},
+		{
+			name:        "No Key",
+			inputCPE:    "cpe:2.3:a:*:http_server:2.4.49",
+			inputAPIKey: "",
+			wantCPE:     "cpe:2.3:a:*:http_server:2.4.49",
+			wantHeader:  false,
+			wantAPIKey:  "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := newNVDRequest(test.inputCPE, test.inputAPIKey)
+			if err != nil {
+				t.Fatalf("newNVDRequest() error = %v", err)
+			}
+			if got.URL.Query().Get("VirtualMatchString") != test.wantCPE {
+				t.Errorf("got %q, want %q", got.URL.RawQuery, test.wantCPE)
+			}
+			hasHeader := len(got.Header.Values("apiKey")) > 0
+			if hasHeader != test.wantHeader {
+				t.Fatalf("apiKey header present = %v, want header %v", hasHeader, test.wantHeader)
+			}
+			if got.Header.Get("apiKey") != test.wantAPIKey {
+				t.Errorf("apiKey got %q, want %q", got.Header.Get("apiKey"), test.wantAPIKey)
+			}
+		})
+	}
+}

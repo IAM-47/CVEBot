@@ -83,9 +83,9 @@ func handleText(text string) (msg string, req string, flag bool) {
 		return HintMessage, "", false
 	}
 }
-func handleReq(req string) (msg string, err error) {
+func handleReq(req, apiKey string) (msg string, err error) {
 	vulns := make([]string, 0, 5)
-	resp, err := NVDData(req)
+	resp, err := NVDData(req, apiKey)
 	if err != nil {
 		return BedNetworkMessage, fmt.Errorf("cant do request: %w", err)
 	}
