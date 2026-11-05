@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: cve_bot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required in .env}
+      POSTGRES_DB: cve_bot
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - "pgdata:/var/lib/postgresql"
+volumes:
+  pgdata:
