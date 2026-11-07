@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -51,6 +52,8 @@ var apiclient = http.Client{Timeout: time.Second * 10}
 var pollClient = http.Client{Timeout: time.Second * 45}
 
 func main() {
+	ctx := context.Background()
+
 	err := godotenv.Load(".env")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Fatal(err)
@@ -59,9 +62,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	pool, err := dbConnect(ctx, cfg.DSN)
+	if err != nil {
+		log.Fatal("db: ", err)
+	}
+	defer pool.Close()
 	var baseURL = "https://api.telegram.org/bot" + cfg.TelegramToken + "/getUpdates"
 	var sendURL = "https://api.telegram.org/bot" + cfg.TelegramToken + "/sendMessage"
 	var offset int64 = 0
+	bot := &Bot{
+		sendURL: sendURL,
+		nvdKey:  cfg.NVDAPIKey,
+		store:   NewSubscriptionsStorage(pool),
+	}
+	log.Println("Connected to database")
 	for {
 		res, err := getUpdates(baseURL, offset)
 		if err != nil {
@@ -69,26 +83,12 @@ func main() {
 			time.Sleep(1 * time.Second)
 			continue
 		}
+
 		for i := range res {
 			fmt.Printf("Update ID: %d\n", res[i].ID)
 			if res[i].Msg != nil {
 				fmt.Printf("Text: %s\nChatID: %d\n", res[i].Msg.Text, res[i].Msg.Chat.ID)
-				message, req, flag := handleText(res[i].Msg.Text)
-				if err := sendMessage(sendURL, res[i].Msg.Chat.ID, message); err != nil {
-					log.Printf("send message: %v", err)
-				}
-				if !flag {
-					continue
-				}
-				msg, err := handleReq(req, cfg.NVDAPIKey)
-				if err != nil {
-					log.Printf("cant handleReq: %v", err)
-				}
-				if msg != "" {
-					if err := sendMessage(sendURL, res[i].Msg.Chat.ID, msg); err != nil {
-						log.Printf("send message: %v", err)
-					}
-				}
+				bot.handleCommands(ctx, res[i].Msg.Chat.ID, res[i].Msg.Text)
 			}
 		}
 		if len(res) > 0 {

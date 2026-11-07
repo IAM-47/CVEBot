@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 type NVDResponse struct {
@@ -143,7 +142,6 @@ func (c CVE) BestVersion() string {
 	return res
 }
 
-// Not empty query is guaranteed by handleText
 func buildCPE(query string) string {
 	synonyms := map[string]string{
 		"apache":             "http_server",
@@ -156,24 +154,17 @@ func buildCPE(query string) string {
 		"spring":             "spring_framework",
 		"k8s":                "kubernetes",
 	}
-
-	query = strings.ToLower(query)
-	words := strings.Fields(query)
-	if len(words) == 0 {
+	product, version := splitProductVersion(query)
+	if product == "" {
 		return ""
 	}
-	lastWord := words[len(words)-1]
-	runes := []rune(lastWord)
-	if unicode.IsDigit(runes[0]) && len(words) > 1 {
-		param := strings.Join(words[:len(words)-1], "_")
-		if v, ok := synonyms[strings.Join(words[:len(words)-1], " ")]; ok {
-			param = v
-		}
-		return fmt.Sprintf("cpe:2.3:a:*:%s:%s", param, lastWord)
+	if version != "" {
+		version = ":" + version
 	}
-	param := strings.Join(words, "_")
-	if v, ok := synonyms[strings.Join(words, " ")]; ok {
+	param := product
+	if v, ok := synonyms[product]; ok {
 		param = v
 	}
-	return fmt.Sprintf("cpe:2.3:a:*:%s", param)
+	param = strings.Replace(param, " ", "_", -1)
+	return fmt.Sprintf("cpe:2.3:a:*:%s%s", param, version)
 }

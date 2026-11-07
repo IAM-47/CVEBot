@@ -26,7 +26,7 @@ func TestHandleText(t *testing.T) {
 		{
 			name:      "start",
 			input:     "/start",
-			expectedM: "Hey! " + HintMessage,
+			expectedM: StartMessage,
 			expectedR: "",
 			expectedF: false,
 		},
@@ -103,7 +103,7 @@ func TestHandleText(t *testing.T) {
 		{
 			name:      "/start extra",
 			input:     "/start extra",
-			expectedM: "Hey! " + HintMessage,
+			expectedM: StartMessage,
 			expectedR: "",
 			expectedF: false,
 		},
@@ -124,7 +124,7 @@ func TestHandleText(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotM, gotR, gotF := handleText(test.input)
+			gotM, gotR, gotF := handleCVE(test.input)
 
 			if gotM != test.expectedM {
 				t.Errorf("got %q, want %q", gotM, test.expectedM)

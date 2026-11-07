@@ -1,13 +1,22 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
+	"unicode"
 )
+
+type Bot struct {
+	nvdKey  string
+	sendURL string
+	store   *SubscriptionsStorage
+}
 
 func getUpdates(uRl string, offset int64) ([]Update, error) {
 	q := url.Values{}
@@ -57,7 +66,7 @@ func sendMessage(u string, chatID int64, msg string) error {
 	return nil
 }
 
-func handleText(text string) (msg string, req string, flag bool) {
+func handleCVE(text string) (msg string, req string, flag bool) {
 	words := strings.Fields(text)
 	switch {
 	//
@@ -68,7 +77,10 @@ func handleText(text string) (msg string, req string, flag bool) {
 		return TooShortQuery, "", false
 	//
 	case words[0] == "/start":
-		return "Hey! " + HintMessage, "", false
+		return StartMessage, "", false
+	//
+	case words[0] == "/help":
+		return HelpMessage, "", false
 	//
 	case strings.HasPrefix(words[0], "/") && words[0] != "/cve":
 		return "Unknown command. " + HintMessage, "", false
@@ -98,4 +110,62 @@ func handleReq(req, apiKey string) (msg string, err error) {
 	}
 	msg = strings.Join(vulns, "\n\n")
 	return msg, nil
+}
+func splitProductVersion(query string) (product, version string) {
+	query = strings.ToLower(query)
+	words := strings.Fields(query)
+	if len(words) == 0 {
+		return "", ""
+	}
+	lastWord := words[len(words)-1]
+	runes := []rune(lastWord)
+	if unicode.IsDigit(runes[0]) && len(words) > 1 {
+		product = strings.Join(words[:len(words)-1], " ")
+		version = lastWord
+		return product, version
+	}
+	return strings.Join(words, " "), ""
+}
+func (b *Bot) handleCommands(ctx context.Context, chatID int64, text string) {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		if err := sendMessage(b.sendURL, chatID, StartMessage); err != nil {
+			log.Printf("send message: %v", err)
+			return
+		}
+		return
+	}
+	query := strings.Join(words[1:], " ")
+	switch words[0] {
+	//
+	case "/subscribe":
+		msg, err := doSubscription(ctx, query, b.store, chatID)
+		if err != nil {
+			log.Printf("cant do subscription: %v", err)
+		}
+		if err := sendMessage(b.sendURL, chatID, msg); err != nil {
+			log.Printf("send message: %v", err)
+			return
+		}
+	//
+	default:
+		message, req, flag := handleCVE(text)
+		if err := sendMessage(b.sendURL, chatID, message); err != nil {
+			log.Printf("send message: %v", err)
+		}
+		if !flag {
+			return
+		}
+		msg, err := handleReq(req, b.nvdKey)
+		if err != nil {
+			log.Printf("cant handleReq: %v", err)
+			return
+		}
+		if msg != "" {
+			if err := sendMessage(b.sendURL, chatID, msg); err != nil {
+				log.Printf("send message: %v", err)
+				return
+			}
+		}
+	}
 }
