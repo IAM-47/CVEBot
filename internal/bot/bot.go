@@ -107,7 +107,7 @@ func SendMessage(u string, chatID int64, msg string) error {
 	return nil
 }
 
-func HandleCVE(text string) (msg string, req string, flag bool) {
+func handleCVE(text string) (msg string, req string, flag bool) {
 	words := strings.Fields(text)
 	switch {
 	//
@@ -140,7 +140,7 @@ func handleReq(req, apiKey string) (msg string, err error) {
 	vulns := make([]string, 0, 5)
 	resp, err := nvd.Data(req, apiKey)
 	if err != nil {
-		return BedNetworkMessage, fmt.Errorf("cant do request: %w", err)
+		return BadNetworkMessage, fmt.Errorf("cant do request: %w", err)
 	}
 	if len(resp.Vulnerabilities) == 0 {
 		return EmptyRespMessage, nil
@@ -186,7 +186,7 @@ func (b *Bot) HandleCommands(ctx context.Context, chatID int64, text string) {
 		}
 	//
 	default:
-		message, req, flag := HandleCVE(text)
+		message, req, flag := handleCVE(text)
 		if err := SendMessage(b.SendURL, chatID, message); err != nil {
 			log.Printf("send message: %v", err)
 		}
@@ -196,7 +196,6 @@ func (b *Bot) HandleCommands(ctx context.Context, chatID int64, text string) {
 		msg, err := handleReq(req, b.NVDKey)
 		if err != nil {
 			log.Printf("cant handleReq: %v", err)
-			return
 		}
 		if msg != "" {
 			if err := SendMessage(b.SendURL, chatID, msg); err != nil {

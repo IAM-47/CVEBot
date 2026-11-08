@@ -47,7 +47,7 @@ func doSubscription(ctx context.Context, query string, s *storage.SubscriptionsS
 	return fmt.Sprintf("%s %s %s", msg, sub.Product, *sub.Version), nil
 }
 func severityName(n int) string {
-	if n > 0 && n < 5 {
+	if n > 0 && n < len(storage.SeverityNames) {
 		return storage.SeverityNames[n]
 	}
 	return "?"

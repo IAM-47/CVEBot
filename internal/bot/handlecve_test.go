@@ -1,7 +1,6 @@
-package main
+package bot
 
 import (
-	"CVEBot/internal/bot"
 	"testing"
 )
 
@@ -15,21 +14,21 @@ func TestHandleText(t *testing.T) {
 	}{{
 		name:      "empty",
 		input:     "",
-		expectedM: bot.HintMessage,
+		expectedM: HintMessage,
 		expectedR: "",
 		expectedF: false,
 	},
 		{
 			name:      "/cve",
 			input:     "/cve",
-			expectedM: bot.HintMessage,
+			expectedM: HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
 		{
 			name:      "start",
 			input:     "/start",
-			expectedM: bot.StartMessage,
+			expectedM: StartMessage,
 			expectedR: "",
 			expectedF: false,
 		},
@@ -50,14 +49,14 @@ func TestHandleText(t *testing.T) {
 		{
 			name:      "/",
 			input:     "/",
-			expectedM: "Unknown command. " + bot.HintMessage,
+			expectedM: "Unknown command. " + HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
 		{
 			name:      "/d",
 			input:     "/d",
-			expectedM: "Unknown command. " + bot.HintMessage,
+			expectedM: "Unknown command. " + HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
@@ -71,7 +70,7 @@ func TestHandleText(t *testing.T) {
 		{
 			name:      "with only spaces",
 			input:     "			",
-			expectedM: bot.HintMessage,
+			expectedM: HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
@@ -85,35 +84,35 @@ func TestHandleText(t *testing.T) {
 		{
 			name:      "/cve ",
 			input:     "/cve ",
-			expectedM: bot.HintMessage,
+			expectedM: HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
 		{
 			name:      "typo",
 			input:     "/cves nginx",
-			expectedM: "Unknown command. " + bot.HintMessage,
+			expectedM: "Unknown command. " + HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
 		{
 			name:      "/foo o o o",
 			input:     "/foo o o o o",
-			expectedM: "Unknown command. " + bot.HintMessage,
+			expectedM: "Unknown command. " + HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
 		{
 			name:      "/start extra",
 			input:     "/start extra",
-			expectedM: bot.StartMessage,
+			expectedM: StartMessage,
 			expectedR: "",
 			expectedF: false,
 		},
 		{
 			name:      "/cve with only spaces",
 			input:     "/cve			",
-			expectedM: bot.HintMessage,
+			expectedM: HintMessage,
 			expectedR: "",
 			expectedF: false,
 		},
@@ -127,7 +126,7 @@ func TestHandleText(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotM, gotR, gotF := bot.HandleCVE(test.input)
+			gotM, gotR, gotF := handleCVE(test.input)
 
 			if gotM != test.expectedM {
 				t.Errorf("got %q, want %q", gotM, test.expectedM)

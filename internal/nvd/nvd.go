@@ -80,6 +80,9 @@ func newNVDRequest(cpe, apiKey string) (*http.Request, error) {
 func Data(keyword, apiKey string) (*Response, error) {
 	cpe := buildCPE(keyword)
 	req, err := newNVDRequest(cpe, apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create NVD request: %w", err)
+	}
 	resp, err := Apiclient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
