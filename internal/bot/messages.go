@@ -1,4 +1,4 @@
-package main
+package bot
 
 const (
 	HintMessage            = "Wrong format! Format should be like \"/command <any tech> [version]\""
@@ -9,7 +9,9 @@ const (
 	SuccessfulSubscription = "Subscribed successfully!"
 	HelpMessage            = "– /cve <tech> [version]>\n" +
 		"– /subscribe <tech> [version]>\n" +
+		"– /list\n" +
 		"– /help"
 	StartMessage      = "Hey! Just send me any of these commands:\n" + HelpMessage
 	AlreadySubscribed = "Already subscribed!"
+	EmptyList         = "You have no subscriptions. To subscribe type: /subscribe <tech> [version]"
 )

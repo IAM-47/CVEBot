@@ -1,9 +1,10 @@
-package main
+package storage
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,4 +26,17 @@ func (s *SubscriptionsStorage) AddSubscription(ctx context.Context, sub Subscrip
 		return false, fmt.Errorf("add subscription: %w", err)
 	}
 	return inserted, nil
+}
+func (s *SubscriptionsStorage) GetSubscriptionList(ctx context.Context, chatID int64) ([]Subscription, error) {
+	q := `select id, chat_id, product, version, min_severity, kev, created_at from subscriptions where chat_id = $1 order by id`
+	rows, err := s.pool.Query(ctx, q, chatID)
+	if err != nil {
+		return nil, fmt.Errorf("get subscriptions: %w", err)
+	}
+	sub, err := pgx.CollectRows(rows, pgx.RowToStructByName[Subscription])
+	if err != nil {
+		return nil, fmt.Errorf("get subscriptions: %w", err)
+	}
+	return sub, nil
+
 }

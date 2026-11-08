@@ -1,4 +1,4 @@
-package main
+package nvd
 
 import (
 	"math"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestVulnerabilities_GetData(t *testing.T) {
-	test, err := os.ReadFile("testdata/heartbleed.json")
+	test, err := os.ReadFile("../testdata/heartbleed.json")
 	if err != nil {
 		t.Fatal(err)
 	}

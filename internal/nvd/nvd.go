@@ -1,4 +1,4 @@
-package main
+package nvd
 
 import (
 	"encoding/json"
@@ -8,9 +8,11 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
+	"unicode"
 )
 
-type NVDResponse struct {
+type Response struct {
 	TotalResults    int             `json:"totalResults"`
 	Vulnerabilities []Vulnerability `json:"vulnerabilities"`
 }
@@ -36,8 +38,10 @@ type Description struct {
 	Value string `json:"value"`
 }
 
-func GetData(bytes []byte) (*NVDResponse, error) {
-	var response NVDResponse
+var Apiclient = http.Client{Timeout: time.Second * 10}
+
+func GetData(bytes []byte) (*Response, error) {
+	var response Response
 	if err := json.Unmarshal(bytes, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
@@ -73,10 +77,10 @@ func newNVDRequest(cpe, apiKey string) (*http.Request, error) {
 	}
 	return req, nil
 }
-func NVDData(keyword, apiKey string) (*NVDResponse, error) {
+func Data(keyword, apiKey string) (*Response, error) {
 	cpe := buildCPE(keyword)
 	req, err := newNVDRequest(cpe, apiKey)
-	resp, err := apiclient.Do(req)
+	resp, err := Apiclient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
@@ -141,9 +145,23 @@ func (c CVE) BestVersion() string {
 	res := strconv.Itoa(mx)
 	return res
 }
-
+func SplitProductVersion(query string) (product, version string) {
+	query = strings.ToLower(query)
+	words := strings.Fields(query)
+	if len(words) == 0 {
+		return "", ""
+	}
+	lastWord := words[len(words)-1]
+	runes := []rune(lastWord)
+	if unicode.IsDigit(runes[0]) && len(words) > 1 {
+		product = strings.Join(words[:len(words)-1], " ")
+		version = lastWord
+		return product, version
+	}
+	return strings.Join(words, " "), ""
+}
 func buildCPE(query string) string {
-	synonyms := map[string]string{
+	var synonyms = map[string]string{
 		"apache":             "http_server",
 		"apache http server": "http_server",
 		"httpd":              "http_server",
@@ -154,7 +172,7 @@ func buildCPE(query string) string {
 		"spring":             "spring_framework",
 		"k8s":                "kubernetes",
 	}
-	product, version := splitProductVersion(query)
+	product, version := SplitProductVersion(query)
 	if product == "" {
 		return ""
 	}

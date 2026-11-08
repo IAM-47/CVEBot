@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func dbConnect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+func DBConnect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	ctxPing, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	pool, err := pgxpool.New(ctx, dsn)

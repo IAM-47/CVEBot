@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"testing"
@@ -77,7 +77,7 @@ func TestLoadConfig(t *testing.T) {
 			t.Setenv("NVD_API_KEY", test.env.NVDAPIKey)
 			t.Setenv("TELEGRAM_TOKEN", test.env.TelegramToken)
 			t.Setenv("DATABASE_URL", test.env.DSN)
-			got, err := loadConfig()
+			got, err := LoadConfig()
 			if (err != nil) != test.wantErr {
 				t.Fatalf("error = %v, wantErr %v", err, test.wantErr)
 			}

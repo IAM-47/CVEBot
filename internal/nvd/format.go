@@ -1,4 +1,4 @@
-package main
+package nvd
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func formatCVE(c CVE) string {
+func FormatCVE(c CVE) string {
 	score, version, type1, flag := c.BestScore()
 	description, ok := c.EngDescription()
 	if !ok {

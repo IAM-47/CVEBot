@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ type Config struct {
 	DSN           string
 }
 
-func loadConfig() (Config, error) {
+func LoadConfig() (Config, error) {
 	var cfg Config
 	cfg.TelegramToken = strings.TrimSpace(os.Getenv("TELEGRAM_TOKEN"))
 	cfg.NVDAPIKey = strings.TrimSpace(os.Getenv("NVD_API_KEY"))

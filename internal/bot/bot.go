@@ -1,24 +1,65 @@
-package main
+package bot
 
 import (
+	"CVEBot/internal/nvd"
+	"CVEBot/internal/storage"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"unicode"
+	"time"
 )
 
-type Bot struct {
-	nvdKey  string
-	sendURL string
-	store   *SubscriptionsStorage
+type Update struct {
+	ID  int64    `json:"update_id"`
+	Msg *Message `json:"message"`
+}
+type Message struct {
+	ID   int64  `json:"message_id"`
+	From From   `json:"from"`
+	Chat Chat   `json:"chat"`
+	Date int64  `json:"date"`
+	Text string `json:"text"`
+}
+type From struct {
+	ID        int64  `json:"id"`
+	IsBot     bool   `json:"is_bot"`
+	FirstName string `json:"first_name"`
+	UserName  string `json:"username"`
+	LangCode  string `json:"language_code"`
+}
+type Chat struct {
+	ID        int64  `json:"id"`
+	FirstName string `json:"first_name"`
+	UserName  string `json:"username"`
+	Type      string `json:"type"`
+}
+type UpdatesResponse struct {
+	Ok          bool     `json:"ok"`
+	Result      []Update `json:"result"`
+	ErrCode     int      `json:"error_code"`
+	Description string   `json:"description"`
+}
+type SendMessageResponse struct {
+	Ok          bool   `json:"ok"`
+	ErrCode     int    `json:"error_code"`
+	Description string `json:"description"`
 }
 
-func getUpdates(uRl string, offset int64) ([]Update, error) {
+type Bot struct {
+	NVDKey  string
+	SendURL string
+	Store   *storage.SubscriptionsStorage
+}
+
+var pollClient = http.Client{Timeout: time.Second * 45}
+
+func GetUpdates(uRl string, offset int64) ([]Update, error) {
 	q := url.Values{}
 	q.Add("offset", strconv.FormatInt(offset, 10))
 	q.Add("timeout", "30")
@@ -42,11 +83,11 @@ func getUpdates(uRl string, offset int64) ([]Update, error) {
 	}
 	return res.Result, nil
 }
-func sendMessage(u string, chatID int64, msg string) error {
+func SendMessage(u string, chatID int64, msg string) error {
 	q := url.Values{}
 	q.Add("chat_id", strconv.FormatInt(chatID, 10))
 	q.Add("text", msg)
-	sendResponse, err := apiclient.Post(u, "application/x-www-form-urlencoded", strings.NewReader(q.Encode()))
+	sendResponse, err := nvd.Apiclient.Post(u, "application/x-www-form-urlencoded", strings.NewReader(q.Encode()))
 	if err != nil {
 		err = cleanURL(err)
 		return fmt.Errorf("cant do request: %w", err)
@@ -66,7 +107,7 @@ func sendMessage(u string, chatID int64, msg string) error {
 	return nil
 }
 
-func handleCVE(text string) (msg string, req string, flag bool) {
+func HandleCVE(text string) (msg string, req string, flag bool) {
 	words := strings.Fields(text)
 	switch {
 	//
@@ -97,7 +138,7 @@ func handleCVE(text string) (msg string, req string, flag bool) {
 }
 func handleReq(req, apiKey string) (msg string, err error) {
 	vulns := make([]string, 0, 5)
-	resp, err := NVDData(req, apiKey)
+	resp, err := nvd.Data(req, apiKey)
 	if err != nil {
 		return BedNetworkMessage, fmt.Errorf("cant do request: %w", err)
 	}
@@ -105,31 +146,17 @@ func handleReq(req, apiKey string) (msg string, err error) {
 		return EmptyRespMessage, nil
 	}
 	for i := range resp.Vulnerabilities {
-		vulns = append(vulns, formatCVE(resp.Vulnerabilities[i].Cve))
+		vulns = append(vulns, nvd.FormatCVE(resp.Vulnerabilities[i].Cve))
 
 	}
 	msg = strings.Join(vulns, "\n\n")
 	return msg, nil
 }
-func splitProductVersion(query string) (product, version string) {
-	query = strings.ToLower(query)
-	words := strings.Fields(query)
-	if len(words) == 0 {
-		return "", ""
-	}
-	lastWord := words[len(words)-1]
-	runes := []rune(lastWord)
-	if unicode.IsDigit(runes[0]) && len(words) > 1 {
-		product = strings.Join(words[:len(words)-1], " ")
-		version = lastWord
-		return product, version
-	}
-	return strings.Join(words, " "), ""
-}
-func (b *Bot) handleCommands(ctx context.Context, chatID int64, text string) {
+
+func (b *Bot) HandleCommands(ctx context.Context, chatID int64, text string) {
 	words := strings.Fields(text)
 	if len(words) == 0 {
-		if err := sendMessage(b.sendURL, chatID, StartMessage); err != nil {
+		if err := SendMessage(b.SendURL, chatID, StartMessage); err != nil {
 			log.Printf("send message: %v", err)
 			return
 		}
@@ -139,30 +166,40 @@ func (b *Bot) handleCommands(ctx context.Context, chatID int64, text string) {
 	switch words[0] {
 	//
 	case "/subscribe":
-		msg, err := doSubscription(ctx, query, b.store, chatID)
+		msg, err := doSubscription(ctx, query, b.Store, chatID)
 		if err != nil {
 			log.Printf("cant do subscription: %v", err)
 		}
-		if err := sendMessage(b.sendURL, chatID, msg); err != nil {
+		if err := SendMessage(b.SendURL, chatID, msg); err != nil {
+			log.Printf("send message: %v", err)
+			return
+		}
+	//
+	case "/list":
+		msg, err := doList(ctx, b.Store, chatID)
+		if err != nil {
+			log.Printf("cant do list: %v", err)
+		}
+		if err := SendMessage(b.SendURL, chatID, msg); err != nil {
 			log.Printf("send message: %v", err)
 			return
 		}
 	//
 	default:
-		message, req, flag := handleCVE(text)
-		if err := sendMessage(b.sendURL, chatID, message); err != nil {
+		message, req, flag := HandleCVE(text)
+		if err := SendMessage(b.SendURL, chatID, message); err != nil {
 			log.Printf("send message: %v", err)
 		}
 		if !flag {
 			return
 		}
-		msg, err := handleReq(req, b.nvdKey)
+		msg, err := handleReq(req, b.NVDKey)
 		if err != nil {
 			log.Printf("cant handleReq: %v", err)
 			return
 		}
 		if msg != "" {
-			if err := sendMessage(b.sendURL, chatID, msg); err != nil {
+			if err := SendMessage(b.SendURL, chatID, msg); err != nil {
 				log.Printf("send message: %v", err)
 				return
 			}

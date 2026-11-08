@@ -1,4 +1,4 @@
-package main
+package nvd
 
 import (
 	"fmt"
@@ -118,7 +118,7 @@ func TestFormat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotS := formatCVE(tt.cve); gotS != tt.want {
+			if gotS := FormatCVE(tt.cve); gotS != tt.want {
 				t.Errorf("got %q, want %q", gotS, tt.want)
 			}
 		})
