@@ -185,6 +185,16 @@ func (b *Bot) HandleCommands(ctx context.Context, chatID int64, text string) {
 			return
 		}
 	//
+	case "/unsubscribe":
+		msg, err := doUnsubscribe(ctx, query, b.Store, chatID)
+		if err != nil {
+			log.Printf("cant do unsubscribe: %v", err)
+		}
+		if err := SendMessage(b.SendURL, chatID, msg); err != nil {
+			log.Printf("send message: %v", err)
+			return
+		}
+	//
 	default:
 		message, req, flag := handleCVE(text)
 		if err := SendMessage(b.SendURL, chatID, message); err != nil {

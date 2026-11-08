@@ -40,3 +40,14 @@ func (s *SubscriptionsStorage) GetSubscriptionList(ctx context.Context, chatID i
 	return sub, nil
 
 }
+func (s *SubscriptionsStorage) DeleteSubscription(ctx context.Context, sub Subscription) (bool, error) {
+	q := `delete from subscriptions where chat_id = $1 and product = $2 and version is not distinct from $3`
+	tag, err := s.pool.Exec(ctx, q, sub.ChatID, sub.Product, sub.Version)
+	if err != nil {
+		return false, fmt.Errorf("unsubscribe: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+	return true, nil
+}

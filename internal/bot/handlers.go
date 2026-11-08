@@ -77,3 +77,22 @@ func doList(ctx context.Context, s *storage.SubscriptionsStorage, chatID int64) 
 	msg = formatSubscription(subs)
 	return msg, nil
 }
+func doUnsubscribe(ctx context.Context, query string, s *storage.SubscriptionsStorage, chatID int64) (msg string, err error) {
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	sub, err := parseSubscription(query)
+	if err != nil {
+		return HintMessage, nil
+	}
+	sub.ChatID = chatID
+	flag, err := s.DeleteSubscription(dbCtx, sub)
+	if err != nil {
+		return DBError, err
+	}
+	if flag {
+		msg = DeletedSuccessfully
+		return fmt.Sprintf("%s %s %s", msg, sub.Product, *sub.Version), nil
+	}
+	msg = NoSuchSubscription
+	return fmt.Sprintf("%s %s %s", msg, sub.Product, *sub.Version), nil
+}

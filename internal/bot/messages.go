@@ -9,9 +9,12 @@ const (
 	SuccessfulSubscription = "Subscribed successfully!"
 	HelpMessage            = "– /cve <tech> [version]\n" +
 		"– /subscribe <tech> [version]\n" +
+		"– /unsubscribe <tech> [version]\n" +
 		"– /list\n" +
 		"– /help"
-	StartMessage      = "Hey! Just send me any of these commands:\n" + HelpMessage
-	AlreadySubscribed = "Already subscribed!"
-	EmptyList         = "You have no subscriptions. To subscribe type: /subscribe <tech> [version]"
+	StartMessage        = "Hey! Just send me any of these commands:\n" + HelpMessage
+	AlreadySubscribed   = "Already subscribed!"
+	EmptyList           = "You have no subscriptions. To subscribe type: /subscribe <tech> [version]"
+	DeletedSuccessfully = "Deleted successfully!"
+	NoSuchSubscription  = "No such subscription!"
 )
