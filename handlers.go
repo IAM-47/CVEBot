@@ -22,15 +22,24 @@ func parseSubscription(text string) (Subscription, error) {
 	return sub, nil
 }
 func doSubscription(ctx context.Context, query string, s *SubscriptionsStorage, chatID int64) (msg string, err error) {
-	dbctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	sub, err := parseSubscription(query)
 	if err != nil {
 		return HintMessage, nil
 	}
 	sub.ChatID = chatID
-	if err := s.AddSubscription(dbctx, sub); err != nil {
-		return DBError, fmt.Errorf("failed to add subscription: %w", err)
+	inserted, err := s.AddSubscription(dbCtx, sub)
+	if err != nil {
+		return DBError, err
 	}
-	return SuccessfulSubscription, nil
+	if !inserted {
+		msg = AlreadySubscribed
+	} else {
+		msg = SuccessfulSubscription
+	}
+	if sub.Version == nil {
+		return fmt.Sprintf("%s %s", msg, sub.Product), nil
+	}
+	return fmt.Sprintf("%s %s %s", msg, sub.Product, *sub.Version), nil
 }

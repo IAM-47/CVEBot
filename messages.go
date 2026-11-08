@@ -10,5 +10,6 @@ const (
 	HelpMessage            = "– /cve <tech> [version]>\n" +
 		"– /subscribe <tech> [version]>\n" +
 		"– /help"
-	StartMessage = "Hey! Just send me any of these commands:\n" + HelpMessage
+	StartMessage      = "Hey! Just send me any of these commands:\n" + HelpMessage
+	AlreadySubscribed = "Already subscribed!"
 )
