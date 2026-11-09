@@ -16,16 +16,18 @@ func NewSubscriptionsStorage(pool *pgxpool.Pool) *SubscriptionsStorage {
 	return &SubscriptionsStorage{pool: pool}
 }
 
-func (s *SubscriptionsStorage) AddSubscription(ctx context.Context, sub Subscription) (bool, error) {
-	q := `insert into subscriptions (chat_id, product, version) values ($1, $2, $3)
+func (s *SubscriptionsStorage) AddSubscription(ctx context.Context, sub Subscription) (*int, *bool, error) {
+	q := `insert into subscriptions (chat_id, product, version, min_severity, kev) values ($1, $2, $3, $4, $5)
           on conflict (chat_id, product, version) do update 
-		  set min_severity = excluded.min_severity, kev = excluded.kev returning (xmax = 0) as inserted`
-	var inserted bool
-	err := s.pool.QueryRow(ctx, q, sub.ChatID, sub.Product, sub.Version).Scan(&inserted)
+		  set min_severity = excluded.min_severity, kev = excluded.kev
+		  returning old.min_severity, old.kev`
+	var oldSev *int
+	var oldKev *bool
+	err := s.pool.QueryRow(ctx, q, sub.ChatID, sub.Product, sub.Version, sub.MinSeverity, sub.Kev).Scan(&oldSev, &oldKev)
 	if err != nil {
-		return false, fmt.Errorf("add subscription: %w", err)
+		return nil, nil, fmt.Errorf("add subscription: %w", err)
 	}
-	return inserted, nil
+	return oldSev, oldKev, nil
 }
 func (s *SubscriptionsStorage) GetSubscriptionList(ctx context.Context, chatID int64) ([]Subscription, error) {
 	q := `select id, chat_id, product, version, min_severity, kev, created_at from subscriptions where chat_id = $1 order by id`

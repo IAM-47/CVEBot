@@ -8,7 +8,7 @@ const (
 	DBError                = "Something went wrong. Please try again later."
 	SuccessfulSubscription = "Subscribed successfully!"
 	HelpMessage            = "– /cve <tech> [version]\n" +
-		"– /subscribe <tech> [version]\n" +
+		"– /subscribe <tech> [version] [low | medium | high | critical] [kev]\n" +
 		"– /unsubscribe <tech> [version]\n" +
 		"– /list\n" +
 		"– /help"

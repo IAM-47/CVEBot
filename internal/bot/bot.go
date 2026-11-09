@@ -138,7 +138,8 @@ func handleCVE(text string) (msg string, req string, flag bool) {
 }
 func handleReq(req, apiKey string) (msg string, err error) {
 	vulns := make([]string, 0, 5)
-	resp, err := nvd.Data(req, apiKey)
+	product, version := splitProductVersion(req)
+	resp, err := nvd.Data(product, version, apiKey)
 	if err != nil {
 		return BadNetworkMessage, fmt.Errorf("cant do request: %w", err)
 	}
